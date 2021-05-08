@@ -6,13 +6,15 @@ public class TransferDTO {
 	private String accoIdDestination;
 	private Double amount;
 	private String userEmail;
+	private String token;
 	
-	public TransferDTO(String accoIdOrigin, String accoIdDestination, Double amount, String userEmail) {
+	public TransferDTO(String accoIdOrigin, String accoIdDestination, Double amount, String userEmail, String token) {
 		super();
 		this.accoIdOrigin = accoIdOrigin;
 		this.accoIdDestination = accoIdDestination;
 		this.amount = amount;
 		this.userEmail = userEmail;
+		this.token = token;
 	}
 
 	public TransferDTO() {
@@ -49,6 +51,14 @@ public class TransferDTO {
 
 	public void setUserEmail(String userEmail) {
 		this.userEmail = userEmail;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
 	}
 	
 
