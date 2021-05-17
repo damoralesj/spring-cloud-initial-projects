@@ -26,12 +26,14 @@ import co.edu.eafit.bank.entityservice.TransactionService;
 import co.edu.eafit.bank.entityservice.TransactionTypeService;
 import co.edu.eafit.bank.entityservice.UsersService;
 import co.edu.eafit.bank.exception.ZMessManager;
-import co.edu.eafit.bank.openfeignclients.OTPServiceClient;
+import co.edu.eafit.bank.openfeignclients.FeignClients;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 
 @Service
 @Scope("singleton")
+@Slf4j
 public class BankTransactionServiceImpl implements BankTransactionService {
 
 	private final static Double COSTO = 2000.0;
@@ -48,13 +50,18 @@ public class BankTransactionServiceImpl implements BankTransactionService {
 	@Autowired
 	TransactionService transactionService;
 	
+	//@Autowired
+	//FeignClients feignClients;
+	
 	@Autowired
-	OTPServiceClient otpServiceClient;
+	OTPServiceCircuitBreaker otpServiceCircuitBreaker;
 
 	@Override
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
 	public TransactionResultDTO transfer(TransferDTO transferDTO) throws Exception {
 
+		log.info("iniciando tranferencia...");
+		
 		WithdrawDTO withdrawDTO = new WithdrawDTO(transferDTO.getAccoIdOrigin(), transferDTO.getAmount(),
 				transferDTO.getUserEmail());
 		withdraw(withdrawDTO);
@@ -93,7 +100,7 @@ public class BankTransactionServiceImpl implements BankTransactionService {
 		
 		//Validación del OTP
 		OTPValidationResponse otpValidationResponse = 
-					validateToken(user.getUserEmail(), transferDTO.getToken());
+				otpServiceCircuitBreaker.validateToken(user.getUserEmail(), transferDTO.getToken());
 		
 		if (otpValidationResponse ==null || !otpValidationResponse.getValid()) {
 			throw new Exception("No es un OTP Válido");
@@ -108,17 +115,13 @@ public class BankTransactionServiceImpl implements BankTransactionService {
 		transaction.setUsers(user);
 
 		transactionService.save(transaction);
+		
+		log.info("finalizando tranferencia...");
 
 		return new TransactionResultDTO(transaction.getTranId(), withdrawResult.getBalance());
 
 	}
 	
-	//Método que se encarga de validar el Token
-		private OTPValidationResponse validateToken(String user, String otp) {
-			
-			OTPValidationRequest otpValidationRequest = new OTPValidationRequest(user, otp);
-			return otpServiceClient.validateOTP(otpValidationRequest);
-		}
 	
 
 	@Override
